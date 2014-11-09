@@ -31,9 +31,9 @@ int main(int argc, char* argv[])
     memset(memarray,'1',totalBytes);
 
     clock_gettime(CLOCK_REALTIME, &ts3);
-    for(i = 0;i<totalBytes;i++)
+    for(i = 0;i<totalBytes/64;i++)
     {
-        ptr = memarray + i*64;
+        ptr = memarray + i*64*64;
 
         clock_gettime(CLOCK_REALTIME, &ts1);
         reg = *(ptr);
