@@ -1,0 +1,15 @@
+# depslib dependency file v1.0
+1415488921 source:/home/michaelht/Work/temp/memtest/main.c
+	<stdio.h>
+	<stdlib.h>
+	<string.h>
+	<sys/time.h>
+	<time.h>
+
+1415489255 source:/home/michaelht/Work/github/memtest/main.c
+	<stdio.h>
+	<stdlib.h>
+	<string.h>
+	<sys/time.h>
+	<time.h>
+
