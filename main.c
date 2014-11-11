@@ -42,12 +42,12 @@ int main(int argc, char* argv[])
 
     //Write
     printf("============Start allocating and setting memory(%lld MB)...============\n\n",totalMBytes);
-    clock_gettime(CLOCK_REALTIME, &wts_b);
+
     memarray = (BYTE *)malloc(totalSize);
+    //Starting simulation...
     ptlcall_switch_to_sim();
+    clock_gettime(CLOCK_REALTIME, &wts_b);
     memset(memarray,reg,totalBytes);
-    //free(memarray);
-    //return 0;
     clock_gettime(CLOCK_REALTIME, &wts_e);
     time = (wts_e.tv_sec-wts_b.tv_sec)*1000000000 + wts_e.tv_nsec-wts_b.tv_nsec;
     printf("Memory allocation completed.\n");
@@ -68,6 +68,7 @@ int main(int argc, char* argv[])
         //printf("%llx\t%c\n",addr,*((BYTE *)addr));
     }
     clock_gettime(CLOCK_REALTIME, &rts_e);
+    ptlcall_switch_to_native();
     time = (rts_e.tv_sec-rts_b.tv_sec)*1000000000 + rts_e.tv_nsec-rts_b.tv_nsec;
     printf("Read performance testing completed.\n");
     printf("Running time: %ld nsec, %lf sec\n\n\n",time,time/1000000000.0);
@@ -78,7 +79,6 @@ int main(int argc, char* argv[])
     printf("===========================Testing Summary===========================\n\n");
     printf("Memory testing completed.\n");
     printf("Running time: %ld nsec, %lf sec\n\n\n",time,time/1000000000.0);
-    ptlcall_switch_to_native();
 
     return 0;
 }
