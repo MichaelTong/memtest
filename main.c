@@ -33,7 +33,6 @@ int main(int argc, char* argv[])
     UINT64 totalBytes = totalSize/64;
     UINT64 i;
 
-    clock_gettime(CLOCK_REALTIME, &pts_b);
     printf("*********************************************************************\n");
     printf("*                                                                   *\n");
     printf("*          Memory test program, copyright by Michael Tong.          *\n");
@@ -46,6 +45,7 @@ int main(int argc, char* argv[])
     memarray = (BYTE *)malloc(totalSize);
     //Starting simulation...
     ptlcall_switch_to_sim();
+    clock_gettime(CLOCK_REALTIME, &pts_b);
     clock_gettime(CLOCK_REALTIME, &wts_b);
     memset(memarray,reg,totalBytes);
     clock_gettime(CLOCK_REALTIME, &wts_e);
@@ -68,13 +68,13 @@ int main(int argc, char* argv[])
         //printf("%llx\t%c\n",addr,*((BYTE *)addr));
     }
     clock_gettime(CLOCK_REALTIME, &rts_e);
+    clock_gettime(CLOCK_REALTIME, &pts_e);
     ptlcall_switch_to_native();
     time = (rts_e.tv_sec-rts_b.tv_sec)*1000000000 + rts_e.tv_nsec-rts_b.tv_nsec;
     printf("Read performance testing completed.\n");
     printf("Running time: %ld nsec, %lf sec\n\n\n",time,time/1000000000.0);
 
     free(memarray);
-    clock_gettime(CLOCK_REALTIME, &pts_e);
     time = (pts_e.tv_sec-pts_b.tv_sec)*1000000000 + pts_e.tv_nsec-pts_b.tv_nsec;
     printf("===========================Testing Summary===========================\n\n");
     printf("Memory testing completed.\n");
