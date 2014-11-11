@@ -3,6 +3,7 @@
 #include <string.h>
 #include <sys/time.h>
 #include <time.h>
+#include "ptlcalls.h"
 
 #define COLUMNS_PER_ROW
 #define ROWS_PER_BANK
@@ -43,6 +44,7 @@ int main(int argc, char* argv[])
     printf("============Start allocating and setting memory(%lld MB)...============\n\n",totalMBytes);
     clock_gettime(CLOCK_REALTIME, &wts_b);
     memarray = (BYTE *)malloc(totalSize);
+    ptlcall_switch_to_sim();
     memset(memarray,reg,totalBytes);
     //free(memarray);
     //return 0;
@@ -56,7 +58,7 @@ int main(int argc, char* argv[])
     clock_gettime(CLOCK_REALTIME, &rts_b);
     for(i = 0;i<totalBytes/64;i++)
     {
-        ptr = memarray + i*64*64;
+        ptr = memarray + i*64;
 
         //clock_gettime(CLOCK_REALTIME, &srts_b);
         reg = *(ptr);
@@ -76,7 +78,7 @@ int main(int argc, char* argv[])
     printf("===========================Testing Summary===========================\n\n");
     printf("Memory testing completed.\n");
     printf("Running time: %ld nsec, %lf sec\n\n\n",time,time/1000000000.0);
-
+    ptlcall_switch_to_native();
 
     return 0;
 }
