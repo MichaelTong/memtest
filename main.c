@@ -33,7 +33,11 @@ int main(int argc, char* argv[])
     UINT64 i;
 
     clock_gettime(CLOCK_REALTIME, &pts_b);
-    printf("Memory test program, copyright by Michael Tong.\n\n\n");
+    printf("*********************************************************************\n");
+    printf("*                                                                   *\n");
+    printf("*          Memory test program, copyright by Michael Tong.          *\n");
+    printf("*                                                                   *\n");
+    printf("*********************************************************************\n\n");
 
     //Write
     printf("============Start allocating and setting memory(%lld MB)...============\n\n",totalMBytes);
@@ -61,13 +65,16 @@ int main(int argc, char* argv[])
     }
     clock_gettime(CLOCK_REALTIME, &rts_e);
     time = (rts_e.tv_sec-rts_b.tv_sec)*1000000000 + rts_e.tv_nsec-rts_b.tv_nsec;
-    printf("Read performance testing completed. Running time: %ld nsec, %lf sec\n\n\n",time,time/1000000000.0);
+    printf("Read performance testing completed.\n");
+    printf("Running time: %ld nsec, %lf sec\n\n\n",time,time/1000000000.0);
 
     free(memarray);
     clock_gettime(CLOCK_REALTIME, &pts_e);
     time = (pts_e.tv_sec-pts_b.tv_sec)*1000000000 + pts_e.tv_nsec-pts_b.tv_nsec;
     printf("===========================Testing Summary===========================\n\n");
-    printf("Memory testing completed. Running time: %ld nsec, %lf sec\n",time,time/1000000000.0);
+    printf("Memory testing completed.\n");
+    printf("Running time: %ld nsec, %lf sec\n\n\n",time,time/1000000000.0);
+
 
     return 0;
 }
