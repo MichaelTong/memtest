@@ -18,34 +18,56 @@ typedef unsigned long long int UINT64;
 
 int main(int argc, char* argv[])
 {
-    struct timespec ts1,ts2,ts3,ts4;
+    struct timespec pts_b,pts_e;
+    struct timespec wts_b,wts_e;
+    struct timespec rts_b,rts_e;
+    struct timespec srts_b,srts_e;
     UINT32 time;
 
     BYTE *memarray;
     register BYTE reg='1';
     register BYTE *ptr;
-    UINT64 totalSize = 64LL<<23;//64MB
+    UINT64 totalMBytes = 64LL;
+    UINT64 totalSize = totalMBytes<<23;//64MB
     UINT64 totalBytes = totalSize/64;
     UINT64 i;
-    memarray = (BYTE *)malloc(totalSize);
-    memset(memarray,'1',totalBytes);
 
-    clock_gettime(CLOCK_REALTIME, &ts3);
+    clock_gettime(CLOCK_REALTIME, &pts_b);
+    printf("Memory test program, copyright by Michael Tong.\n\n\n");
+
+    //Write
+    printf("============Start allocating and setting memory(%lld MB)...============\n\n",totalMBytes);
+    clock_gettime(CLOCK_REALTIME, &wts_b);
+    memarray = (BYTE *)malloc(totalSize);
+    memset(memarray,reg,totalBytes);
+    clock_gettime(CLOCK_REALTIME, &wts_e);
+    time = (wts_e.tv_sec-wts_b.tv_sec)*1000000000 + wts_e.tv_nsec-wts_b.tv_nsec;
+    printf("Memory allocation completed.\n");
+    printf("Running time: %ld nsec, %lf sec\n\n\n",time,time/1000000000.0);
+
+    //Read
+    printf("==================Start testing read performance...==================\n\n");
+    clock_gettime(CLOCK_REALTIME, &rts_b);
     for(i = 0;i<totalBytes/64;i++)
     {
         ptr = memarray + i*64*64;
 
-        clock_gettime(CLOCK_REALTIME, &ts1);
+        //clock_gettime(CLOCK_REALTIME, &srts_b);
         reg = *(ptr);
-        clock_gettime(CLOCK_REALTIME, &ts2);
-        time = (ts2.tv_sec-ts1.tv_sec)*1000000000 + ts2.tv_nsec-ts1.tv_nsec;
+        //clock_gettime(CLOCK_REALTIME, &srts_e);
+        //time = (srts_e.tv_sec-srts_b.tv_sec)*1000000000 + srts_e.tv_nsec-srts_b.tv_nsec;
 
         //printf("%llx\t%c\n",addr,*((BYTE *)addr));
     }
-    clock_gettime(CLOCK_REALTIME, &ts4);
-    time = (ts4.tv_sec-ts3.tv_sec)*1000000000 + ts4.tv_nsec-ts3.tv_nsec;
-    printf("Running time: %ld\n",time);
+    clock_gettime(CLOCK_REALTIME, &rts_e);
+    time = (rts_e.tv_sec-rts_b.tv_sec)*1000000000 + rts_e.tv_nsec-rts_b.tv_nsec;
+    printf("Read performance testing completed. Running time: %ld nsec, %lf sec\n\n\n",time,time/1000000000.0);
 
     free(memarray);
+    clock_gettime(CLOCK_REALTIME, &pts_e);
+    time = (pts_e.tv_sec-pts_b.tv_sec)*1000000000 + pts_e.tv_nsec-pts_b.tv_nsec;
+    printf("===========================Testing Summary===========================\n\n");
+    printf("Memory testing completed. Running time: %ld nsec, %lf sec\n",time,time/1000000000.0);
+
     return 0;
 }
