@@ -35,7 +35,8 @@ int main(int argc, char* argv[])
 
     printf("*********************************************************************\n");
     printf("*                                                                   *\n");
-    printf("*          Memory test program, copyright by Michael Tong.          *\n");
+    printf("*          Memory test program, for MARSSx86 with DRAMSim2          *\n");
+    printf("*                     Copyright by Michael Tong                     *\n");
     printf("*                                                                   *\n");
     printf("*********************************************************************\n\n");
 
