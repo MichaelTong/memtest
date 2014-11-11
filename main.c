@@ -44,8 +44,8 @@ int main(int argc, char* argv[])
     clock_gettime(CLOCK_REALTIME, &wts_b);
     memarray = (BYTE *)malloc(totalSize);
     memset(memarray,reg,totalBytes);
-    free(memarray);
-    return 0;
+    //free(memarray);
+    //return 0;
     clock_gettime(CLOCK_REALTIME, &wts_e);
     time = (wts_e.tv_sec-wts_b.tv_sec)*1000000000 + wts_e.tv_nsec-wts_b.tv_nsec;
     printf("Memory allocation completed.\n");
