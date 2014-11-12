@@ -30,10 +30,12 @@
 		</Build>
 		<Compiler>
 			<Add option="-Wall" />
+			<Add option="-D_GNU_SOURCE" />
 		</Compiler>
 		<Unit filename="main.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="ptlcalls.h" />
 		<Extensions>
 			<code_completion />
 			<debugger />

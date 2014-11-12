@@ -10,7 +10,7 @@
 #define BANKS_PER_RANK 8
 #define RANKS_PER_CHANNEL 2
 #define NUM_OF_CHANNEL 2
-
+#define MB_256_IN_BYTES (256LL<<23)/8
 
 typedef unsigned char BYTE;
 typedef unsigned long int UINT32;
@@ -25,13 +25,17 @@ int main(int argc, char* argv[])
     struct timespec srts_b,srts_e;
     UINT32 time;
 
-    BYTE *memarray;
+    BYTE **memarray;
     register BYTE reg='1';
     register BYTE *ptr;
-    UINT64 totalMBytes = 64LL;
+    register BYTE *base;
+    UINT64 totalMBytes = 512LL;
     UINT64 totalSize = totalMBytes<<23;//64MB
-    UINT64 totalBytes = totalSize/64;
+    UINT64 totalBytes = totalSize/8;
     UINT64 i;
+    int num_array = totalMBytes/256 + totalMBytes%256==0?0:1;
+    double *timeRecord;
+
 
     printf("*********************************************************************\n");
     printf("*                                                                   *\n");
@@ -43,12 +47,21 @@ int main(int argc, char* argv[])
     //Write
     printf("============Start allocating and setting memory(%lld MB)...============\n\n",totalMBytes);
 
-    memarray = (BYTE *)malloc(totalSize);
+    //memarray = (BYTE *)calloc(totalByte,sizeof(char));s
     //Starting simulation...
     ptlcall_switch_to_sim();
     clock_gettime(CLOCK_REALTIME, &pts_b);
     clock_gettime(CLOCK_REALTIME, &wts_b);
-    memset(memarray,reg,totalBytes);
+
+    memarray = (BYTE **)malloc(num_array*sizeof(BYTE*));
+    for(i=0;i<num_array-1;i++)
+    {
+        memarray[i]=(BYTE *)malloc(MB_256_IN_BYTES*sizeof(char));
+        memset(memarray[i],reg,MB_256_IN_BYTES);
+    }
+    memarray[i]=(BYTE *)malloc((totalBytes-MB_256_IN_BYTES*i)*sizeof(char));
+    memset(memarray[i],reg ,totalBytes-MB_256_IN_BYTES*i);
+
     clock_gettime(CLOCK_REALTIME, &wts_e);
     time = (wts_e.tv_sec-wts_b.tv_sec)*1000000000 + wts_e.tv_nsec-wts_b.tv_nsec;
     printf("Memory allocation completed.\n");
@@ -56,10 +69,11 @@ int main(int argc, char* argv[])
 
     //Read
     printf("==================Start testing read performance...==================\n\n");
+    base = *(memarray);
     clock_gettime(CLOCK_REALTIME, &rts_b);
     for(i = 0;i<totalBytes/64;i++)
     {
-        ptr = memarray + i*64;
+        ptr = base + i*64;
 
         //clock_gettime(CLOCK_REALTIME, &srts_b);
         reg = *(ptr);
@@ -75,6 +89,8 @@ int main(int argc, char* argv[])
     printf("Read performance testing completed.\n");
     printf("Running time: %ld nsec, %lf sec\n\n\n",time,time/1000000000.0);
 
+    for(i=0;i<num_array;i++)
+        free(memarray[i]);
     free(memarray);
     time = (pts_e.tv_sec-pts_b.tv_sec)*1000000000 + pts_e.tv_nsec-pts_b.tv_nsec;
     printf("===========================Testing Summary===========================\n\n");
