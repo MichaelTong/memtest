@@ -105,16 +105,16 @@ int main(int argc, char* argv[])
             //printf("%llx\t%c\n",addr,*((BYTE *)addr));
         }
     }
-    for(i = 0; i<totalLines;i++)
-    {
-        timeRecord[i]=timeRecord[i]/10;
-    }
     clock_gettime(CLOCK_REALTIME, &rts_e);
     clock_gettime(CLOCK_REALTIME, &pts_e);
     ptlcall_switch_to_native();
     time = (rts_e.tv_sec-rts_b.tv_sec)*1000000000 + rts_e.tv_nsec-rts_b.tv_nsec;
     printf("Read performance testing completed.\n");
     printf("Running time: %ld nsec, %lf sec\n\n\n",time,time/1000000000.0);
+    for(i = 0; i<totalLines;i++)
+    {
+        timeRecord[i]=timeRecord[i]/10;
+    }
     print_time(timeRecord,totalLines,"records.txt");
     for(i=0; i<num_array; i++)
         free(memarray[i]);
