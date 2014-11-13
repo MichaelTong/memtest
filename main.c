@@ -96,11 +96,11 @@ int main(int argc, char* argv[])
         for(i = 0; i<totalLines; i++)
         {
             ptr = base + i*CB_SIZE;
-            //ptlcall_switch_to_sim();
+            ptlcall_switch_to_sim();
             clock_gettime(CLOCK_REALTIME, &srts_b);
             reg = *(ptr);
             clock_gettime(CLOCK_REALTIME, &srts_e);
-            //ptlcall_switch_to_native();
+            ptlcall_switch_to_native();
             time = (srts_e.tv_sec-srts_b.tv_sec)*1000000000 + srts_e.tv_nsec-srts_b.tv_nsec;
             timeRecord[i]+=time;
             //printf("%llx\t%c\n",addr,*((BYTE *)addr));
