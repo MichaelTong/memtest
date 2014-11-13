@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
     register BYTE reg='1';
     register BYTE *ptr;
     register BYTE *base;
-    UINT64 totalMBytes = 128LL;
+    UINT64 totalMBytes = 64LL;
     UINT64 totalSize = totalMBytes<<23;//64MB
     UINT64 totalBytes = totalSize/8;
     UINT64 totalLines = totalBytes/CB_SIZE;
@@ -89,17 +89,18 @@ int main(int argc, char* argv[])
     //Read
     printf("==================Start testing read performance...==================\n\n");
     base = *(memarray);
-    ptlcall_switch_to_sim();
+    //ptlcall_switch_to_sim();
     clock_gettime(CLOCK_REALTIME, &rts_b);
     for(j=0; j<10; j++)
     {
         for(i = 0; i<totalLines; i++)
         {
             ptr = base + i*CB_SIZE;
-
+            //ptlcall_switch_to_sim();
             clock_gettime(CLOCK_REALTIME, &srts_b);
             reg = *(ptr);
             clock_gettime(CLOCK_REALTIME, &srts_e);
+            //ptlcall_switch_to_native();
             time = (srts_e.tv_sec-srts_b.tv_sec)*1000000000 + srts_e.tv_nsec-srts_b.tv_nsec;
             timeRecord[i]+=time;
             //printf("%llx\t%c\n",addr,*((BYTE *)addr));
@@ -107,7 +108,7 @@ int main(int argc, char* argv[])
     }
     clock_gettime(CLOCK_REALTIME, &rts_e);
     clock_gettime(CLOCK_REALTIME, &pts_e);
-    ptlcall_switch_to_native();
+    //ptlcall_switch_to_native();
     time = (rts_e.tv_sec-rts_b.tv_sec)*1000000000 + rts_e.tv_nsec-rts_b.tv_nsec;
     printf("Read performance testing completed.\n");
     printf("Running time: %ld nsec, %lf sec\n\n\n",time,time/1000000000.0);
