@@ -3,6 +3,8 @@
 #include <string.h>
 #include <sys/time.h>
 #include <time.h>
+#include <stdbool.h>
+#include <ctype.h>
 #include "ptlcalls.h"
 
 #define COLUMNS_PER_ROW
@@ -10,14 +12,128 @@
 #define BANKS_PER_RANK 8
 #define RANKS_PER_CHANNEL 2
 #define NUM_OF_CHANNEL 2
-#define MB_256_IN_BYTES (256LL<<23)/8
-#define CB_SIZE 64
+#define MB_256_IN_BYTES ((256LL<<23)/8)
+#define CB_SIZE 64 //in bytes
 
 typedef unsigned char BYTE;
 typedef unsigned long int UINT32;
 typedef unsigned long long int UINT64;
 
-void print_time(double *timeRecord, UINT64 len,char *filename)
+enum
+{
+    CL_INIT,
+    CL_PROGRAM_B,
+    CL_PROGRAM_E,
+    CL_WRITTING_B,
+    CL_WRITTING_E,
+    CL_READING_B,
+    CL_READING_E,
+    CL_SIMULATOR_B,
+    CL_SIMULATOR_E,
+    CL_STATISTICS_B,
+    CL_STATISTICS_E,
+    CL_HELP
+};
+
+enum
+{
+    WR_BYTE,
+    WR_BLOCK,
+    WR_DEFAULT
+};
+
+enum
+{
+    RD_BYTE,
+    RD_BLOCK,
+    RD_ROW,
+    RD_BANK,
+    RD_RANK,
+    RD_DEFAULT
+};
+
+enum
+{
+    PARAMS_NO,
+    PARAMS_M,
+    PARAMS_MF,
+    PARAMS_R,
+    PARAMS_RF,
+    PARAMS_W,
+    PARAMS_WF,
+};
+
+enum
+{
+    PARAMS_ERR_INVALID,
+    PARAMS_ERR_DUPLICATE,
+    PARAMS_ERR_LIMIT
+};
+
+UINT32 run_time;
+
+BYTE *memarray;
+UINT64 totalMBytes;
+UINT64 totalSize;
+UINT64 totalBytes;
+UINT64 totalLines;
+int num_array;
+double *timeRecord ;
+
+bool write_sim;
+bool write_mode;
+bool read_sim;
+bool read_mode;
+
+void print_time(double *timeRecord, UINT64 len,char *filename);
+void print_info(int cl);
+void start_sim();
+void stop_sim();
+void init(int argc, char* argv[]);
+void writing(bool sim, int write_mode);
+void reading(bool sim, int read_mode);
+void statistics(UINT64 data_size, char *filename);
+void cleanup();
+void params(int argc, char* argv[]);
+void print_params_err(int state, int err);
+
+void init(int argc, char* argv[])
+{
+    params(argc,argv);
+    print_info(CL_PROGRAM_B);
+    print_info(CL_INIT);
+
+    totalSize = totalMBytes<<23;//64MB
+    totalBytes = totalSize/8;
+    totalLines = totalBytes/CB_SIZE;
+    num_array = totalMBytes/256 + (totalMBytes%256==0?0:1);
+    timeRecord = (double *)calloc(totalLines, sizeof(double));
+
+    //allocation
+    memarray = (BYTE *)malloc(totalBytes*sizeof(BYTE));
+    return;
+}
+
+int main(int argc, char* argv[])
+{
+    struct timespec pts_b,pts_e;
+
+    init(argc, argv);
+
+    clock_gettime(CLOCK_REALTIME, &pts_b);
+
+    writing(write_sim, write_mode);
+    reading(read_sim, read_mode);
+    cleanup();
+
+    clock_gettime(CLOCK_REALTIME, &pts_e);
+    run_time = (pts_e.tv_sec-pts_b.tv_sec)*1000000000 + pts_e.tv_nsec-pts_b.tv_nsec;
+    print_info(CL_PROGRAM_E);
+
+    return 0;
+}
+
+void write_record(double *timeRecord, UINT64 len,char *filename)
 {
     FILE *fp;
     UINT64 i;
@@ -27,104 +143,469 @@ void print_time(double *timeRecord, UINT64 len,char *filename)
         return ;
     }
     fprintf(fp,"Cacheline #\t\t\tAccess Time\n");
-    for(i=0;i<len;i++)
+    for(i=0; i<len; i++)
     {
         fprintf(fp,"%lld\t\t\t\t%lf\n",i,timeRecord[i]);
     }
     fclose(fp);
     return;
 }
-
-int main(int argc, char* argv[])
+void print_info(int cl)
 {
-    struct timespec pts_b,pts_e;
+    switch (cl)
+    {
+    case CL_PROGRAM_B:
+        //Starting
+        printf("*********************************************************************\n");
+        printf("*                                                                   *\n");
+        printf("*          Memory test program, for MARSSx86 with DRAMSim2          *\n");
+        printf("*                     Copyright by Michael Tong                     *\n");
+        printf("*                                                                   *\n");
+        printf("*********************************************************************\n\n");
+        break;
+    case CL_WRITTING_B:
+        //Allocating and writing
+        printf("============Start allocating and setting memory(%lld MB)...============\n\n",totalMBytes);
+        break;
+    case CL_WRITTING_E:
+        //Writing ends
+        printf("Memory allocation completed.\n");
+        printf("Running time: %ld nsec, %lf sec\n\n\n",run_time,run_time/1000000000.0);
+        break;
+    case CL_READING_B:
+        printf("==================Start testing read performance...==================\n\n");
+        break;
+    case CL_READING_E:
+        printf("Read performance testing completed.\n");
+        printf("Running time: %ld nsec, %lf sec\n\n\n",run_time,run_time/1000000000.0);
+        break;
+    case CL_PROGRAM_E:
+        printf("===========================Testing Summary===========================\n\n");
+        printf("Memory testing completed.\n");
+        printf("Running time: %ld nsec, %lf sec\n\n\n",run_time,run_time/1000000000.0);
+        break;
+    case CL_INIT:
+        printf(">>> Initiate parameters...\n\n");
+        break;
+    case CL_SIMULATOR_B:
+        printf(">>> Simuation starts...\n\n");
+        break;
+    case CL_SIMULATOR_E:
+        printf(">>> Simulation ends...\n\n");
+        break;
+    case CL_STATISTICS_B:
+        printf(">>> Now process reading stastics...\n\n");
+        break;
+    case CL_STATISTICS_E:
+        printf(">>> Finish processing reading stastics...\n\n");
+        break;
+    case CL_HELP:
+        printf("Valid Options:\n");
+        printf("-m MEM\t\t\t\t\tAmount of memory for test.(32MB as default)\n");
+        printf("-r [BYTE|BLOCK|ROW|BANK|RANK] | [SIM]\tRead interval and Simulator.(BLOCK and false as default)\n");
+        printf("-r [BYTE|BLOCK] | [SIM]\t\t\tWrite interval and Simulator.(As a whole and false as default)\n");
+    }
+}
+
+void writing(bool sim, int write_mode)
+{
     struct timespec wts_b,wts_e;
+    int j;
+
+    print_info(CL_WRITTING_B);
+
+    if(sim)
+    {
+        start_sim();
+    }
+    switch (write_mode)
+    {
+    case WR_BYTE:
+        clock_gettime(CLOCK_REALTIME, &wts_b);
+        for(j=0; j<totalBytes; j++)
+        {
+            memset(memarray+j,'1',1);
+        }
+        clock_gettime(CLOCK_REALTIME, &wts_e);
+        break;
+
+    case WR_BLOCK:
+        clock_gettime(CLOCK_REALTIME, &wts_b);
+        for(j=0; j<totalLines; j++)
+        {
+            memset(memarray+64*j,'1',CB_SIZE);
+        }
+        clock_gettime(CLOCK_REALTIME, &wts_e);
+        break;
+
+    case WR_DEFAULT:
+    default:
+        clock_gettime(CLOCK_REALTIME, &wts_b);
+        memset(memarray,'1',totalBytes);
+        clock_gettime(CLOCK_REALTIME, &wts_e);
+        break;
+    }
+    if(sim)
+    {
+        stop_sim();
+    }
+
+    run_time = (wts_e.tv_sec-wts_b.tv_sec)*1000000000 + wts_e.tv_nsec-wts_b.tv_nsec;
+    print_info(CL_WRITTING_E);
+
+    return;
+}
+
+void start_sim()
+{
+    print_info(CL_SIMULATOR_B);
+    ptlcall_switch_to_sim();
+}
+
+void stop_sim()
+{
+    print_info(CL_SIMULATOR_E);
+    ptlcall_switch_to_native();
+}
+
+void reading(bool sim, int read_mode)
+{
     struct timespec rts_b,rts_e;
     struct timespec srts_b,srts_e;
-    UINT32 time;
-
-    BYTE **memarray;
-    register BYTE reg='1';
     register BYTE *ptr;
     register BYTE *base;
-    UINT64 totalMBytes = 32LL;
-    UINT64 totalSize = totalMBytes<<23;//64MB
-    UINT64 totalBytes = totalSize/8;
-    UINT64 totalLines = totalBytes/CB_SIZE;
-    UINT64 i;
+    register BYTE reg='1';
+    UINT64 read_interval;
+    UINT64 read_size;
     int j;
-    int num_array = totalMBytes/256 + totalMBytes%256==0?0:1;
-    double *timeRecord = (double *)calloc(totalLines, sizeof(double));
+    UINT64 i;
 
-
-    printf("*********************************************************************\n");
-    printf("*                                                                   *\n");
-    printf("*          Memory test program, for MARSSx86 with DRAMSim2          *\n");
-    printf("*                     Copyright by Michael Tong                     *\n");
-    printf("*                                                                   *\n");
-    printf("*********************************************************************\n\n");
-
-    //Write
-    printf("============Start allocating and setting memory(%lld MB)...============\n\n",totalMBytes);
-
-    //Starting simulation...
-    //ptlcall_switch_to_sim();
-    clock_gettime(CLOCK_REALTIME, &pts_b);
-    clock_gettime(CLOCK_REALTIME, &wts_b);
-
-    memarray = (BYTE **)malloc(num_array*sizeof(BYTE*));
-    for(j=0; j<num_array-1; j++)
+    switch (read_mode)
     {
-        memarray[j]=(BYTE *)malloc(MB_256_IN_BYTES*sizeof(char));
-        memset(memarray[j],reg,MB_256_IN_BYTES);
+    case RD_BYTE:
+        read_interval = 1;
+        read_size = totalBytes;
+        break;
+    case RD_ROW:
+        break;
+    case RD_BANK:
+        break;
+    case RD_RANK:
+        break;
+    case RD_BLOCK:
+    case RD_DEFAULT:
+        read_interval = CB_SIZE;
+        read_size = totalLines;
+        break;
     }
-    memarray[j]=(BYTE *)malloc((totalBytes-MB_256_IN_BYTES*j)*sizeof(char));
-    memset(memarray[j],reg ,totalBytes-MB_256_IN_BYTES*j);
 
-    clock_gettime(CLOCK_REALTIME, &wts_e);
-    time = (wts_e.tv_sec-wts_b.tv_sec)*1000000000 + wts_e.tv_nsec-wts_b.tv_nsec;
-    printf("Memory allocation completed.\n");
-    printf("Running time: %ld nsec, %lf sec\n\n\n",time,time/1000000000.0);
-
-    //Read
-    printf("==================Start testing read performance...==================\n\n");
-    base = *(memarray);
+    print_info(CL_READING_B);
+    base = memarray;
     ptlcall_switch_to_sim();
     clock_gettime(CLOCK_REALTIME, &rts_b);
     for(j=0; j<10; j++)
     {
-        for(i = 0; i<totalLines; i++)
+        for(i = 0; i<read_size; i++)
         {
-            ptr = base + i*CB_SIZE;
-            ptlcall_switch_to_sim();
-            //clock_gettime(CLOCK_REALTIME, &srts_b);
+            ptr = base + i*read_interval;
+
+            clock_gettime(CLOCK_REALTIME, &srts_b);
             reg = *(ptr);
-            //clock_gettime(CLOCK_REALTIME, &srts_e);
-            ptlcall_switch_to_native();
-            time = (srts_e.tv_sec-srts_b.tv_sec)*1000000000 + srts_e.tv_nsec-srts_b.tv_nsec;
-            timeRecord[i]+=time;
-            //printf("%llx\t%c\n",addr,*((BYTE *)addr));
+            clock_gettime(CLOCK_REALTIME, &srts_e);
+
+            run_time = (srts_e.tv_sec-srts_b.tv_sec)*1000000000 + srts_e.tv_nsec-srts_b.tv_nsec;
+            timeRecord[i]+=run_time;
         }
     }
     clock_gettime(CLOCK_REALTIME, &rts_e);
-    clock_gettime(CLOCK_REALTIME, &pts_e);
-    ptlcall_switch_to_native();
-    time = (rts_e.tv_sec-rts_b.tv_sec)*1000000000 + rts_e.tv_nsec-rts_b.tv_nsec;
-    printf("Read performance testing completed.\n");
-    printf("Running time: %ld nsec, %lf sec\n\n\n",time,time/1000000000.0);
-    for(i = 0; i<totalLines;i++)
+    run_time = (rts_e.tv_sec-rts_b.tv_sec)*1000000000 + rts_e.tv_nsec-rts_b.tv_nsec;
+    print_info(CL_READING_E);
+
+    statistics(read_size,"records.txt");
+    return;
+}
+
+void statistics(UINT64 data_size, char *filename)
+{
+    UINT64 i;
+    print_info(CL_STATISTICS_B);
+    for(i = 0; i<data_size; i++)
     {
         timeRecord[i]=timeRecord[i]/10;
     }
-    print_time(timeRecord,totalLines,"records.txt");
-    for(i=0; i<num_array; i++)
-        free(memarray[i]);
+    write_record(timeRecord, data_size, filename);
+    print_info(CL_STATISTICS_E);
+}
+
+void cleanup()
+{
     free(memarray);
     free(timeRecord);
-    time = (pts_e.tv_sec-pts_b.tv_sec)*1000000000 + pts_e.tv_nsec-pts_b.tv_nsec;
-    printf("===========================Testing Summary===========================\n\n");
-    printf("Memory testing completed.\n");
-    printf("Running time: %ld nsec, %lf sec\n\n\n",time,time/1000000000.0);
+}
 
-    return 0;
+void params(int argc, char* argv[])
+{
+    int i;
+    int temp;
+    int state=PARAMS_NO;
+    read_mode=RD_DEFAULT;
+    write_mode=WR_DEFAULT;
+    totalMBytes = 32;
+    read_sim=false;
+    write_sim=false;
+    bool rm_set=false,rs_set=false,wm_set=false,ws_set=false,m_set=false;
+    if(argc==1)
+    {
+        print_info(CL_HELP);
+        exit(-1);
+    }
+    for(i=1;i<argc;i++)
+    {
+        if(strcmp(argv[i],"-h")==0)
+        {
+            print_info(CL_HELP);
+            exit(0);
+        }
+        else if(strcmp(argv[i],"-m")==0)
+        {
+            if(state!=PARAMS_NO&&state!=PARAMS_MF&&state!=PARAMS_WF&&state!=PARAMS_RF)
+            {
+                print_params_err(state,PARAMS_ERR_INVALID);
+                exit(-1);
+            }
+            if(m_set)
+            {
+                print_params_err(PARAMS_M,PARAMS_ERR_DUPLICATE);
+                exit(-1);
+            }
+            state = PARAMS_M;
+        }
+        else if(strcmp(argv[i],"-r")==0)
+        {
+            if(state!=PARAMS_NO&&state!=PARAMS_MF&&state!=PARAMS_WF&&state!=PARAMS_RF)
+            {
+                print_params_err(state,PARAMS_ERR_INVALID);
+                exit(-1);
+            }
+            if(rs_set&&rm_set)
+            {
+                print_params_err(PARAMS_R,PARAMS_ERR_DUPLICATE);
+                exit(-1);
+            }
+            state = PARAMS_R;
+        }
+        else if(strcmp(argv[i],"-w")==0)
+        {
+            if(state!=PARAMS_NO&&state!=PARAMS_MF&&state!=PARAMS_WF&&state!=PARAMS_RF)
+            {
+                print_params_err(state,PARAMS_ERR_INVALID);
+                exit(-1);
+            }
+            if(ws_set&&wm_set)
+            {
+                print_params_err(PARAMS_W,PARAMS_ERR_DUPLICATE);
+                exit(-1);
+            }
+            state = PARAMS_W;
+        }
+        else if(strcmp(argv[i],"SIM")==0)
+        {
+            if(state != PARAMS_WF && state != PARAMS_W && state != PARAMS_R && state != PARAMS_RF)
+            {
+                print_params_err(state,PARAMS_ERR_INVALID);
+                exit(-1);
+            }
+            if(state == PARAMS_R|| state == PARAMS_RF)
+            {
+                if(rs_set)
+                {
+                    print_params_err(PARAMS_R,PARAMS_ERR_DUPLICATE);
+                    exit(-1);
+                }
+                read_sim=true;
+                state = PARAMS_RF;
+                rs_set = true;
+            }
+            else if(state == PARAMS_W||state == PARAMS_WF)
+            {
+                if(ws_set)
+                {
+                    print_params_err(PARAMS_W,PARAMS_ERR_DUPLICATE);
+                    exit(-1);
+                }
+                write_sim=true;
+                state = PARAMS_WF;
+                ws_set = true;
+            }
+        }
+        else if(strcmp(argv[i],"BYTE")==0)
+        {
+            if(state != PARAMS_WF && state != PARAMS_W && state != PARAMS_R && state != PARAMS_RF)
+            {
+                print_params_err(state,PARAMS_ERR_INVALID);
+                exit(-1);
+            }
+            if(state == PARAMS_R|| state == PARAMS_RF)
+            {
+                if(rm_set)
+                {
+                    print_params_err(PARAMS_R,PARAMS_ERR_DUPLICATE);
+                    exit(-1);
+                }
+                read_mode=RD_BYTE;
+                state = PARAMS_RF;
+                rm_set = true;
+            }
+            else if(state == PARAMS_W||state == PARAMS_WF)
+            {
+                if(wm_set)
+                {
+                    print_params_err(PARAMS_W,PARAMS_ERR_DUPLICATE);
+                    exit(-1);
+                }
+                write_mode=WR_BYTE;
+                state = PARAMS_WF;
+                wm_set = true;
+            }
+        }
+        else if(strcmp(argv[i],"BLOCK")==0)
+        {
+            if(state != PARAMS_WF && state != PARAMS_W && state != PARAMS_R && state != PARAMS_RF)
+            {
+                print_params_err(state,PARAMS_ERR_INVALID);
+                exit(0);
+            }
+            if(state == PARAMS_R|| state == PARAMS_RF)
+            {
+                if(rm_set)
+                {
+                    print_params_err(PARAMS_R,PARAMS_ERR_DUPLICATE);
+                    exit(-1);
+                }
+                read_mode=RD_BLOCK;
+                state = PARAMS_RF;
+                rm_set = true;
+            }
+            else if(state == PARAMS_W||state == PARAMS_WF)
+            {
+                if(wm_set)
+                {
+                    print_params_err(PARAMS_W,PARAMS_ERR_DUPLICATE);
+                    exit(-1);
+                }
+                write_mode=WR_BLOCK;
+                state = PARAMS_WF;
+                wm_set = true;
+            }
+        }
+        else if(strcmp(argv[i],"ROW")==0)
+        {
+            if(state != PARAMS_R && state != PARAMS_RF)
+            {
+                print_params_err(state,PARAMS_ERR_INVALID);
+                exit(0);
+            }
+
+            if(rm_set)
+            {
+                print_params_err(PARAMS_R,PARAMS_ERR_DUPLICATE);
+                exit(-1);
+            }
+            read_mode=RD_ROW;
+            state = PARAMS_RF;
+            rm_set = true;
+        }
+        else if(strcmp(argv[i],"BANK")==0)
+        {
+            if(state != PARAMS_R && state != PARAMS_RF)
+            {
+                print_params_err(state,PARAMS_ERR_INVALID);
+                exit(0);
+            }
+            if(rm_set)
+            {
+                print_params_err(PARAMS_R,PARAMS_ERR_DUPLICATE);
+                exit(-1);
+            }
+            read_mode=RD_BANK;
+            state = PARAMS_RF;
+            rm_set = true;
+        }
+        else if(strcmp(argv[i],"RANK")==0)
+        {
+
+            if(state != PARAMS_R && state != PARAMS_RF)
+            {
+                print_params_err(state,PARAMS_ERR_INVALID);
+                exit(0);
+            }
+            if(rm_set)
+            {
+                print_params_err(PARAMS_R,PARAMS_ERR_DUPLICATE);
+                exit(-1);
+            }
+            read_mode=RD_RANK;
+            state = PARAMS_RF;
+            rm_set = true;
+        }
+        else if((temp = atoi(argv[i])))
+        {
+            if(state != PARAMS_M)
+            {
+                print_params_err(state,PARAMS_ERR_INVALID);
+                exit(-1);
+            }
+            if(temp<=0||temp>=4096)
+            {
+                print_params_err(state,PARAMS_ERR_LIMIT);
+                exit(-1);
+            }
+            totalMBytes = temp;
+            m_set = true;
+            state = PARAMS_MF;
+        }
+        else
+        {
+            print_params_err(state,PARAMS_ERR_INVALID);
+            exit(-1);
+        }
+
+    }
+    return;
+}
+
+void print_params_err(int state, int err)
+{
+    switch (state)
+    {
+    case PARAMS_NO:
+        if(err == PARAMS_ERR_INVALID)
+            fprintf(stderr,"Invalid options.\n");
+        break;
+    case PARAMS_M:
+    case PARAMS_MF:
+        if(err == PARAMS_ERR_INVALID)
+            fprintf(stderr,"Invalid parameters for option:\t-m\n");
+        else if(err == PARAMS_ERR_DUPLICATE)
+            fprintf(stderr,"Duplicate parameters for option:\t-m\n");
+        else if(err == PARAMS_ERR_LIMIT)
+            fprintf(stderr,"Memory limit for -m:\t 0-4096(exclusive)\n");
+        break;
+    case PARAMS_R:
+    case PARAMS_RF:
+        if(err == PARAMS_ERR_INVALID)
+            fprintf(stderr,"Invalid parameters for option:\t-r\n");
+        else if(err == PARAMS_ERR_DUPLICATE)
+            fprintf(stderr,"Duplicate parameters for option:\t-r\n");
+        break;
+    case PARAMS_W:
+    case PARAMS_WF:
+        if(err == PARAMS_ERR_INVALID)
+            fprintf(stderr,"Invalid parameters for option:\t-w\n");
+        else if(err == PARAMS_ERR_DUPLICATE)
+            fprintf(stderr,"Duplicate parameters for option:\t-w\n");
+        break;
+    }
+    printf("\n");
+    print_info(CL_HELP);
 }

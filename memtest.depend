@@ -13,12 +13,14 @@
 	<sys/time.h>
 	<time.h>
 
-1415844149 source:/home/tong/work/memtest/main.c
+1415921001 source:/home/tong/work/memtest/main.c
 	<stdio.h>
 	<stdlib.h>
 	<string.h>
 	<sys/time.h>
 	<time.h>
+	<stdbool.h>
+	<ctype.h>
 	"ptlcalls.h"
 
 1415663387 /home/tong/work/memtest/ptlcalls.h
