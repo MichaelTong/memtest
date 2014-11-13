@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
     register BYTE reg='1';
     register BYTE *ptr;
     register BYTE *base;
-    UINT64 totalMBytes = 64LL;
+    UINT64 totalMBytes = 32LL;
     UINT64 totalSize = totalMBytes<<23;//64MB
     UINT64 totalBytes = totalSize/8;
     UINT64 totalLines = totalBytes/CB_SIZE;
