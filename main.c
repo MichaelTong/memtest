@@ -126,6 +126,7 @@ void write_record(double *timeRecord, UINT64 len,char *filename)
         printf("ERROR: Failed to open file %s to write.\n",filename);
         return ;
     }
+    fprintf(fp,"Total Reading time:\t\t\t%lld ns\n\n",run_time);
     fprintf(fp,"Cacheline #\t\t\tAccess Time\n");
     for(i=0; i<len; i++)
     {
