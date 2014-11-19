@@ -14,7 +14,7 @@
 #define NUM_OF_CHANNEL 2
 #define MB_256_IN_BYTES ((256LL<<23)/8)
 #define CB_SIZE 64 //in bytes
-#define MEASURE_TIME 1
+#define MEASURE_TIME 5
 
 typedef unsigned char BYTE;
 typedef unsigned long int UINT32;
@@ -126,7 +126,7 @@ void write_record(double *timeRecord, UINT64 len,char *filename)
         printf("ERROR: Failed to open file %s to write.\n",filename);
         return ;
     }
-    fprintf(fp,"Total Reading time:\t\t\t%lld ns\n\n",run_time);
+    fprintf(fp,"Total Reading time:\t\t\t%ld ns\n\n",run_time);
     fprintf(fp,"Cacheline #\t\t\tAccess Time\n");
     for(i=0; i<len; i++)
     {
@@ -340,7 +340,6 @@ void params(int argc, char* argv[])
     int i;
     int temp;
     int state=PARAMS_NO;
-    char str[50];
     read_mode=RD_DEFAULT;
     write_mode=WR_DEFAULT;
     totalMBytes = 32;
