@@ -251,8 +251,8 @@ void start_sim()
 
 void stop_sim()
 {
-    print_info(CL_SIMULATOR_E);
     ptlcall_switch_to_native();
+    print_info(CL_SIMULATOR_E);
 }
 
 void reading(bool sim, int read_mode)
@@ -289,7 +289,8 @@ void reading(bool sim, int read_mode)
     timeRecord = (double *)calloc(read_size, sizeof(double));
     print_info(CL_READING_B);
     base = memarray;
-    ptlcall_switch_to_sim();
+    if(sim)
+        start_sim();
     clock_gettime(CLOCK_REALTIME, &rts_b);
     for(j=0; j<MEASURE_TIME; j++)
     {
@@ -306,6 +307,8 @@ void reading(bool sim, int read_mode)
         }
     }
     clock_gettime(CLOCK_REALTIME, &rts_e);
+    if(sim)
+        stop_sim();
     run_time = (rts_e.tv_sec-rts_b.tv_sec)*1000000000 + rts_e.tv_nsec-rts_b.tv_nsec;
     print_info(CL_READING_E);
 
