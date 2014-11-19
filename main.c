@@ -14,6 +14,7 @@
 #define NUM_OF_CHANNEL 2
 #define MB_256_IN_BYTES ((256LL<<23)/8)
 #define CB_SIZE 64 //in bytes
+#define MEASURE_TIME 1
 
 typedef unsigned char BYTE;
 typedef unsigned long int UINT32;
@@ -73,11 +74,11 @@ enum
 UINT32 run_time;
 
 BYTE *memarray;
+UINT64 totalKBytes;
 UINT64 totalMBytes;
 UINT64 totalSize;
 UINT64 totalBytes;
 UINT64 totalLines;
-int num_array;
 double *timeRecord ;
 
 bool write_sim;
@@ -96,28 +97,11 @@ void statistics(UINT64 data_size, char *filename);
 void cleanup();
 void params(int argc, char* argv[]);
 void print_params_err(int state, int err);
-
-void init(int argc, char* argv[])
-{
-    params(argc,argv);
-    print_info(CL_PROGRAM_B);
-    print_info(CL_INIT);
-
-    totalSize = totalMBytes<<23;//64MB
-    totalBytes = totalSize/8;
-    totalLines = totalBytes/CB_SIZE;
-    num_array = totalMBytes/256 + (totalMBytes%256==0?0:1);
-    timeRecord = (double *)calloc(totalLines, sizeof(double));
-
-    //allocation
-    memarray = (BYTE *)malloc(totalBytes*sizeof(BYTE));
-    return;
-}
+char* makefilename();
 
 int main(int argc, char* argv[])
 {
     struct timespec pts_b,pts_e;
-
     init(argc, argv);
 
     clock_gettime(CLOCK_REALTIME, &pts_b);
@@ -165,7 +149,10 @@ void print_info(int cl)
         break;
     case CL_WRITTING_B:
         //Allocating and writing
-        printf("============Start allocating and setting memory(%lld MB)...============\n\n",totalMBytes);
+        if(totalMBytes!=0)
+            printf("============Start allocating and setting memory(%lld MB)...============\n\n",totalMBytes);
+        else
+            printf("============Start allocating and setting memory(%lld KB)...============\n\n",totalKBytes);
         break;
     case CL_WRITTING_E:
         //Writing ends
@@ -299,11 +286,12 @@ void reading(bool sim, int read_mode)
         break;
     }
 
+    timeRecord = (double *)calloc(read_size, sizeof(double));
     print_info(CL_READING_B);
     base = memarray;
     ptlcall_switch_to_sim();
     clock_gettime(CLOCK_REALTIME, &rts_b);
-    for(j=0; j<10; j++)
+    for(j=0; j<MEASURE_TIME; j++)
     {
         for(i = 0; i<read_size; i++)
         {
@@ -321,7 +309,7 @@ void reading(bool sim, int read_mode)
     run_time = (rts_e.tv_sec-rts_b.tv_sec)*1000000000 + rts_e.tv_nsec-rts_b.tv_nsec;
     print_info(CL_READING_E);
 
-    statistics(read_size,"records.txt");
+    statistics(read_size,makefilename());
     return;
 }
 
@@ -331,7 +319,7 @@ void statistics(UINT64 data_size, char *filename)
     print_info(CL_STATISTICS_B);
     for(i = 0; i<data_size; i++)
     {
-        timeRecord[i]=timeRecord[i]/10;
+        timeRecord[i]=timeRecord[i]/MEASURE_TIME;
     }
     write_record(timeRecord, data_size, filename);
     print_info(CL_STATISTICS_E);
@@ -348,6 +336,7 @@ void params(int argc, char* argv[])
     int i;
     int temp;
     int state=PARAMS_NO;
+    char str[50];
     read_mode=RD_DEFAULT;
     write_mode=WR_DEFAULT;
     totalMBytes = 32;
@@ -359,7 +348,7 @@ void params(int argc, char* argv[])
         print_info(CL_HELP);
         exit(-1);
     }
-    for(i=1;i<argc;i++)
+    for(i=1; i<argc; i++)
     {
         if(strcmp(argv[i],"-h")==0)
         {
@@ -555,12 +544,25 @@ void params(int argc, char* argv[])
                 print_params_err(state,PARAMS_ERR_INVALID);
                 exit(-1);
             }
-            if(temp<=0||temp>=4096)
+            if(!isdigit(argv[i][strlen(argv[i])-1])&&argv[i][strlen(argv[i])-1]!='K'&&argv[i][strlen(argv[i])-1]!='M')
+            {
+                print_params_err(state,PARAMS_ERR_INVALID);
+                exit(-1);
+            }
+            if(argv[i][strlen(argv[i])-1]=='K')
+            {
+                totalMBytes = 0;
+                totalKBytes = temp;
+            }
+            else if(argv[i][strlen(argv[i])-1]=='M')
+            {
+                totalMBytes = temp;
+            }
+            if(totalMBytes<0||temp>=4096)
             {
                 print_params_err(state,PARAMS_ERR_LIMIT);
                 exit(-1);
             }
-            totalMBytes = temp;
             m_set = true;
             state = PARAMS_MF;
         }
@@ -608,4 +610,36 @@ void print_params_err(int state, int err)
     }
     printf("\n");
     print_info(CL_HELP);
+}
+
+char* makefilename()
+{
+    char buff[50],*out;
+    time_t t;
+    time(&t);
+    struct tm *timeinfo = localtime(&t);
+    sprintf(buff,"record-%d-%d-%d-%d-%d-%d.txt",timeinfo->tm_year+1900,timeinfo->tm_mon+1,timeinfo->tm_mday, timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+    out = (char *)malloc((strlen(buff)+1)*sizeof(char));
+    strcpy(out,buff);
+    return out;
+}
+void init(int argc, char* argv[])
+{
+    params(argc,argv);
+    print_info(CL_PROGRAM_B);
+    print_info(CL_INIT);
+
+    if(totalMBytes!=0)
+    {
+        totalSize = totalMBytes<<23;
+        totalKBytes = totalMBytes<<10;
+    }
+    else
+        totalSize = totalKBytes<<13;
+    totalBytes = totalSize>>3;
+    totalLines = totalBytes/CB_SIZE;
+
+    //allocation
+    memarray = (BYTE *)malloc(totalBytes*sizeof(BYTE));
+    return;
 }
