@@ -14,7 +14,7 @@
 #define NUM_OF_CHANNEL 2
 #define MB_256_IN_BYTES ((256LL<<23)/8)
 #define CB_SIZE 64 //in bytes
-#define MEASURE_TIME 3
+#define MEASURE_TIME 1
 
 typedef unsigned char BYTE;
 typedef unsigned long int UINT32;
