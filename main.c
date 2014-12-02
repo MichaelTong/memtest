@@ -645,5 +645,6 @@ void init(int argc, char* argv[])
 
     //allocation
     memarray = (BYTE *)malloc(totalBytes*sizeof(BYTE));
+    printf("Address of Memarray:\t %llx\n",(UINT64)memarray);
     return;
 }
