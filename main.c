@@ -262,7 +262,7 @@ void stop_sim()
 void reading(bool sim, int read_mode)
 {
     struct timespec rts_b,rts_e;
-    //struct timespec srts_b,srts_e;
+    //register struct timespec srts_b,srts_e;
     register BYTE *ptr;
     register BYTE *base;
     register BYTE reg='1';
@@ -308,7 +308,6 @@ void reading(bool sim, int read_mode)
 
             //run_time = (srts_e.tv_sec-srts_b.tv_sec)*1000000000 + srts_e.tv_nsec-srts_b.tv_nsec;
             //timeRecord[i]+=run_time;
-            printf("%d\n",i);
         }
     //}
     clock_gettime(CLOCK_REALTIME, &rts_e);
