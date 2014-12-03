@@ -262,14 +262,14 @@ void stop_sim()
 void reading(bool sim, int read_mode)
 {
     struct timespec rts_b,rts_e;
-    struct timespec srts_b,srts_e;
+    //struct timespec srts_b,srts_e;
     register BYTE *ptr;
     register BYTE *base;
     register BYTE reg='1';
     UINT64 read_interval;
-    UINT64 read_size;
-    int j;
-    UINT64 i;
+    register UINT64 read_size;
+   // int j;
+    register UINT64 i;
 
     switch (read_mode)
     {
@@ -296,8 +296,8 @@ void reading(bool sim, int read_mode)
     if(sim)
         start_sim();
     clock_gettime(CLOCK_REALTIME, &rts_b);
-    for(j=0; j<MEASURE_TIME; j++)
-    {
+    //for(j=0; j<MEASURE_TIME; j++)
+    //{
         for(i = 0; i<read_size; i++)
         {
             ptr = base + i*read_interval;
@@ -309,7 +309,7 @@ void reading(bool sim, int read_mode)
             //run_time = (srts_e.tv_sec-srts_b.tv_sec)*1000000000 + srts_e.tv_nsec-srts_b.tv_nsec;
             //timeRecord[i]+=run_time;
         }
-    }
+    //}
     clock_gettime(CLOCK_REALTIME, &rts_e);
     if(sim)
         stop_sim();
@@ -624,7 +624,30 @@ char* makefilename()
     time_t t;
     time(&t);
     struct tm *timeinfo = localtime(&t);
-    sprintf(buff,"record-%d-%d-%d-%d-%d-%d.txt",timeinfo->tm_year+1900,timeinfo->tm_mon+1,timeinfo->tm_mday, timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+    char year[5],month[3],day[3],hour[3],min[3],sec[3];
+    sprintf(year,"%d",timeinfo->tm_year+1900);
+    if(timeinfo->tm_mon+1<10)
+        sprintf(month,"0%d",timeinfo->tm_mon+1);
+    else
+        sprintf(month,"%d",timeinfo->tm_mon+1);
+    if(timeinfo->tm_mday<10)
+        sprintf(day,"0%d",timeinfo->tm_mday);
+    else
+        sprintf(day,"%d",timeinfo->tm_mday);
+    if(timeinfo->tm_hour<10)
+        sprintf(hour,"0%d",timeinfo->tm_hour);
+    else
+        sprintf(hour,"%d",timeinfo->tm_hour);
+    if(timeinfo->tm_min<10)
+        sprintf(min,"0%d",timeinfo->tm_min);
+    else
+        sprintf(min,"%d",timeinfo->tm_min);
+    if(timeinfo->tm_sec<10)
+        sprintf(sec,"0%d",timeinfo->tm_sec);
+    else
+        sprintf(sec,"%d",timeinfo->tm_sec);
+
+    sprintf(buff,"record-%s-%s-%s-%s-%s-%s.txt",year,month,day, hour, min, sec);
     out = (char *)malloc((strlen(buff)+1)*sizeof(char));
     strcpy(out,buff);
     return out;
