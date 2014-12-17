@@ -103,19 +103,53 @@ void address_mapping(UINT64 physicalAddress, int *chan, int *rank, int *bank, in
 
 int main(int argc, char* argv[])
 {
-    struct timespec pts_b,pts_e;
+    struct timespec pts_b,pts_e,ts_1,ts_2,ts_3,ts_4;
+    UINT64 read_interval;
+    register UINT64 read_size;
+    register UINT64 i;
+    register BYTE *ptr;
+    register BYTE *base;
+    register BYTE reg='1';
     init(argc, argv);
 
     clock_gettime(CLOCK_REALTIME, &pts_b);
 
     writing(write_sim, write_mode);
-    reading(read_sim, read_mode);
+    read_size = totalBytes;
+    read_interval=1;
+    base = memarray;
+    clock_gettime(CLOCK_REALTIME, &ts_1);
+
+    start_sim();
+    clock_gettime(CLOCK_REALTIME, &ts_2);
+    //for(j=0; j<MEASURE_TIME; j++)
+    //{
+        for(i = 0; i<read_size; i++)
+        {
+            ptr = base + i*read_interval;
+
+            //clock_gettime(CLOCK_REALTIME, &srts_b);
+            reg = *(ptr);
+            //clock_gettime(CLOCK_REALTIME, &srts_e);
+
+            //run_time = (srts_e.tv_sec-srts_b.tv_sec)*1000000000 + srts_e.tv_nsec-srts_b.tv_nsec;
+            //timeRecord[i]+=run_time;
+        }
+    //}
+    clock_gettime(CLOCK_REALTIME, &ts_3);
+    stop_sim();
+    clock_gettime(CLOCK_REALTIME, &ts_4);
+
+    //reading(read_sim, read_mode);
     cleanup();
 
     clock_gettime(CLOCK_REALTIME, &pts_e);
     run_time = (pts_e.tv_sec-pts_b.tv_sec)*1000000000 + pts_e.tv_nsec-pts_b.tv_nsec;
     print_info(CL_PROGRAM_E);
-
+    run_time = (ts_4.tv_sec-ts_1.tv_sec)*1000000000 + ts_4.tv_nsec-ts_1.tv_nsec;
+    printf("Reading time outside sim:\t\t%ld ns\n\n",run_time);
+    run_time = (ts_3.tv_sec-ts_2.tv_sec)*1000000000 + ts_3.tv_nsec-ts_2.tv_nsec;
+    printf("Reading time inside sim:\t\t%ld ns\n\n",run_time);
     return 0;
 }
 
